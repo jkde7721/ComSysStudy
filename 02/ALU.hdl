@@ -42,5 +42,28 @@ CHIP ALU {
         ng; // 1 if (out < 0),  0 otherwise
 
     PARTS:
-    // 아직 구현을 못했습니다......
+    // nx, zx 
+    And16(a=x, out=zerox);
+    Not16(in=x, out=notx);    
+    Not16(in=zerox, out=zeronotx); 
+    Mux4Way16(a=x, b=zerox, c=notx, d=zeronotx, sel[0]=zx, sel[1]=nx, out=outx);
+
+    // ny, zy 
+    And16(a=y, out=zeroy);
+    Not16(in=y, out=noty);
+    Not16(in=zeroy, out=zeronoty); 
+    Mux4Way16(a=y, b=zeroy, c=noty, d=zeronoty, sel[0]=zy, sel[1]=ny, out=outy); 
+
+    // f, no
+    And16(a=outx, b=outy, out=andxy);
+    Add16(a=outx, b=outy, out=addxy);
+    Not16(in=andxy, out=notandxy);
+    Not16(in=addxy, out=notaddxy);
+    Mux4Way16(a=andxy, b=addxy, c=notandxy, d=notaddxy, sel[0]=f, sel[1]=no, out=out, out[15]=ng, out[0..7]=re1, out[8..15]=re2); // 최상위 비트가 1이면 음수(ng=1)
+
+    // zr 
+    Or8Way(in=re1, out=or1);
+    Or8Way(in=re2, out=or2);
+    Or(a=or1, b=or2, out=nzr);
+    Not(in=nzr, out=zr); 
 }
