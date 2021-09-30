@@ -63,8 +63,8 @@ CHIP ALU {
    And16 (a=x2, b=y2, out=Andxy);
    Mux16 (a=Andxy, b=Sumxy, sel=f, out=fxy);
    
-   //Not16 (in=fxy, out=nfxy);
-   Mux16 (a=fxy, b=nfxy, sel=no, out[0..7]=w1, out[8..15]=w1, out[15]=ng, out=out);
+   Not16 (in=fxy, out=nfxy);
+   Mux16 (a=fxy, b=nfxy, sel=no, out[0..7]=w1, out[8..15]=w2, out[15]=ng, out=out);
 
    //zr, ng
    Or8Way (in=w1, out=or1);
