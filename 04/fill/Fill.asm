@@ -44,9 +44,8 @@
     @LOOP
     D; JLE // cur <= SCREEN 이면 while문 앞으로  
     @cur
-    A = M - 1 // 현재 cur가 가리키고 있는 주소는 유효하지 않은 값 have 
-    M = 0 // 흰색 
-    @cur
     M = M - 1
+    A = M
+    M = 0 // 흰색 
     @LOOP
     0; JMP 
