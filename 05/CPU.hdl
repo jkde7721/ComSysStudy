@@ -1,0 +1,66 @@
+// This file is part of www.nand2tetris.org
+// and the book "The Elements of Computing Systems"
+// by Nisan and Schocken, MIT Press.
+// File name: projects/05/CPU.hdl
+
+/**
+ * The Hack CPU (Central Processing unit), consisting of an ALU,
+ * two registers named A and D, and a program counter named PC.
+ * The CPU is designed to fetch and execute instructions written in 
+ * the Hack machine language. In particular, functions as follows:
+ * Executes the inputted instruction according to the Hack machine 
+ * language specification. The D and A in the language specification
+ * refer to CPU-resident registers, while M refers to the external
+ * memory location addressed by A, i.e. to Memory[A]. The inM input 
+ * holds the value of this location. If the current instruction needs 
+ * to write a value to M, the value is placed in outM, the address 
+ * of the target location is placed in the addressM output, and the 
+ * writeM control bit is asserted. (When writeM==0, any value may 
+ * appear in outM). The outM and writeM outputs are combinational: 
+ * they are affected instantaneously by the execution of the current 
+ * instruction. The addressM and pc outputs are clocked: although they 
+ * are affected by the execution of the current instruction, they commit 
+ * to their new values only in the next time step. If reset==1 then the 
+ * CPU jumps to address 0 (i.e. pc is set to 0 in next time step) rather 
+ * than to the address resulting from executing the current instruction. 
+ */
+
+CHIP CPU {
+
+    IN  inM[16],         // M value input  (M = contents of RAM[A])
+        instruction[16], // Instruction for execution
+        reset;           // Signals whether to re-start the current
+                         // program (reset==1) or continue executing
+                         // the current program (reset==0).
+
+    OUT outM[16],        // M value output
+        writeM,          // Write to M? 
+        addressM[15],    // Address in data memory (of M) what is this? 
+        pc[15];          // address of next instruction
+
+    PARTS:
+    Mux16(a[0..14]=instruction[0..14], b=prevout, sel=instruction[15], out=muxa); // A register 값 결정 (0-명령어의 나머지 부분(주소), 1-이전 ALU 결과)
+    Mux(a=true, b=instruction[5], sel=instruction[15], out=loadAreg); // 주소 명령어인 경우 A register 항상 load, 계산 명령어인 경우에만 첫번째 dest 필드에 따라 A register 새로운 값으로 load  
+    ARegister(in=muxa, load=loadAreg, out=preva, out[0..14]=addressM); // addressM에 A register 값 그대로 전달 
+    Mux(a=false, b=instruction[4], sel=instruction[15], out=loadDreg); // 주소 명령어인 경우 D register load X, 계산 명령어인 경우에만 두번째 dest 필드에 따라 D register 새로운 값으로 load  
+    DRegister(in=prevout, load=loadDreg, out=prevd); // 두번째 dest 필드가 1이면 새로운 값 load 
+    Mux(a=false, b=instruction[3], sel=instruction[15], out=writeM, out=writeMtmp); // 주소 명령어 이면 writeM false, 계산 명령어이면 writeM에 세번째 dest 필드 값 그대로 전달  
+
+    Mux16(a=preva, b=inM, sel=instruction[12], out=muxam); // ALU 연산의 피연산자 A or M 선택 (by. a 필드)
+    // ALU 연산
+    ALU(x=prevd, y=muxam, zx=instruction[11], nx=instruction[10], zy=instruction[9], ny=instruction[8], f=instruction[7], no=instruction[6], out=outMtmp, out=prevout, zr=zr, ng=ng);
+    Mux16(b=outMtmp, sel=writeMtmp, out=outM); // M register에 쓸 때에만 이전 ALU 결과값 outM에 out 
+
+    // 이전 ALU의 결과값이 0보다 큰지 작은지 0과 같은지 검사 -> PC 결정  
+    And(a=zr, b=instruction[1], out=equalzero); // 두번째 jump 필드가 1이면서 이전 ALU 결과가 0
+    And(a=ng, b=instruction[2], out=lessthanzero); // 첫번째 jump 필드가 1이면서 이전 ALU 결과가 0보다 작음 
+    Or(a=zr, b=ng, out=notpos);
+    Not(in=notpos, out=pos); // 이전 ALU 결과가 0보다 크면서 
+    And(a=pos, b=instruction[0], out=giantthanzero); // 세번째 jump 필드가 1
+    And(a=instruction[0], b=instruction[1], out=tmp);
+    And(a=tmp, b=instruction[2], out=nocondjump); // 모든 jump 필드가 1
+    Or8Way(in[0]=equalzero, in[1]=lessthanzero, in[2]=giantthanzero, in[3]=nocondjump, out=jumptmp); // 4가지 중 하나라도 만족하면 jump 
+    And(a=jumptmp, b=instruction[15], out=jump); // jump 필드 조건에 따라 jump 해야 하는 상황임에도 만약 주소 명령어라면 jump 할 수 없음 
+    Not(in=reset, out=notreset);
+    PC(in=preva, load=jump, inc=notreset, reset=reset, out[0..14]=pc); // 내부적으로 이전 PC 값 가지고 있음 
+}

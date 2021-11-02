@@ -1,0 +1,50 @@
+// This file is part of www.nand2tetris.org
+// and the book "The Elements of Computing Systems"
+// by Nisan and Schocken, MIT Press.
+// File name: projects/05/Memory.hdl
+
+/**
+ * The complete address space of the Hack computer's memory,
+ * including RAM and memory-mapped I/O. 
+ * The chip facilitates read and write operations, as follows:
+ *     Read:  out(t) = Memory[address(t)](t)
+ *     Write: if load(t-1) then Memory[address(t-1)](t) = in(t-1)
+ * In words: the chip always outputs the value stored at the memory 
+ * location specified by address. If load==1, the in value is loaded 
+ * into the memory location specified by address. This value becomes 
+ * available through the out output from the next time step onward.
+ * Address space rules:
+ * Only the upper 16K+8K+1 words of the Memory chip are used. 
+ * Access to address>0x6000 is invalid. Access to any address in 
+ * the range 0x4000-0x5FFF results in accessing the screen memory 
+ * map. Access to address 0x6000 results in accessing the keyboard 
+ * memory map. The behavior in these addresses is described in the 
+ * Screen and Keyboard chip specifications given in the book.
+ */
+
+/*
+RAM16K : 0 ~ 16383
+Screen : 16384 ~ 24575
+Keyboard : 24576
+
+16384(10) = 100000000000000(2)
+24576(10) = 110000000000000(2) 
+
+=> RAM16K의 주소를 지정하기 위해서는 LSB부터 14비트 필요 
+=> Screen의 15번째 비트는 항상 1이므로 Screen의 크기 8K의 주소를 지정하기 위해 13비트 필요 
+=> 핵 컴퓨터에서 가용한 메모리의 가장 마지막 주소는 24576이므로 만약 14, 15번째 비트가 1이라면 나머지 하위 비트들은 0이라고 생각해도 ok -> 14, 15번째 비트가 1인지 여부만 검사해도 해당 주소가 가리키는 공간이 키보드 메모리 맵이라는 것을 알 수 있음 
+*/
+
+CHIP Memory {
+    IN in[16], load, address[15];
+    OUT out[16];
+
+    PARTS:
+    Mux(a=load, b=false, sel=address[14], out=loadRam); // 최상위 비트가 0이면 load 비트에 따라 RAM16K load, but 1이면 RAM16K에 대한 작업이 아니므로 무조건 load 비트값은 false로 
+    RAM16K(in=in, load=loadRam, address=address[0..13], out=ram);
+    Mux(a=false, b=load, sel=address[14], out=loadScreen); // 최상위 비트가 1이면 load 비트에 따라 Screen load, but 0이면 Screen에 대한 작업이 아니므로 무조건 load 비트값은 false로  
+    Screen(in=in, load=loadScreen, address=address[0..12], out=screen);
+    Keyboard(out=keyboard);
+    Mux16(a=screen, b=keyboard, sel=address[13], out=tmp);
+    Mux16(a=ram, b=tmp, sel=address[14], out=out);     
+}
