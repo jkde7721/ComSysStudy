@@ -13,37 +13,53 @@
 
 // Put your code here.
 (LOOP)
+@i
+M=0 // i=0
+
 @KBD
 D=M
 
 @TOBLACK
-D;JGT // a key is pressed
+D;JGT // a key is pressed. If D>0 goto TOBLACK
 @TOWHITE
-D;JEQ // no key is pressed
+D;JEQ // no key is pressed. If D=0 goto TOWHITE
 
 (TOBLACK)
-@0
-M=-1 // 1111 1111 1111 1111
+@SCREEN
+D=A // D=16384
 
-@FILL
-0;JMP // goto FILL
+@i
+M=M+16 // 16 픽셀씩 칠해지므로
+A=M // A=i
+
+A=A+D // A=16384+i
+M=-1 // M[A]=-1(1111 1111 1111 1111)
+
+D=A
+@KBD
+D=D-A // D=(16384+i)-24576
+@TOBLACK
+D;JLT // If D<0 goto TOBLACK. 다 칠해지도록
+
+@LOOP
+0;JMP // goto LOOP
 
 (TOWHITE)
-@0
-M=0
-
-@FILL
-0;JMP // goto FILL
-
-(FILL)
-@0
-D=M // D= -1 or 0
-
 @SCREEN
-M=D
+D=A // D=16384
 
-// 첫 16비트는 칠했는데 그 이후는 잘 모르겠음
-// 인덱스의 값을 키우는 방법을 모르겠음
+@i
+M=M+16 // 16 픽셀씩 칠해지므로
+A=M // A=i
+
+A=A+D // A=16384+i
+M=0 // M[A]=0
+
+D=A
+@KBD
+D=D-A // D=(16384+i)-24576
+@TOWHITE
+D;JLT // If D<0 goto TOWHITE. 다 칠해지도록
 
 @LOOP
 0;JMP // goto LOOP
