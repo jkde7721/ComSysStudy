@@ -29,6 +29,8 @@ CHIP CPU {
 
     IN  inM[16],         // M value input  (M = contents of RAM[A])
         instruction[16], // Instruction for execution
+                         // address instruction -> 0vvv vvvv vvvv vvvv
+                         // compute instruction -> 111a cccc ccdd djjj
         reset;           // Signals whether to re-start the current
                          // program (reset==1) or continue executing
                          // the current program (reset==0).
@@ -40,4 +42,44 @@ CHIP CPU {
 
     PARTS:
     // Put your code here:
+    Not (in=instruction[15], out=notInstruct);
+    Mux16 (a=outM_, b=instruction, sel=notInstruct, out=Ain); // address instruction starts with 0
+    
+    Or (a=notInstruct, b=instruction[5], out=Aload); // instruction[5] is d1
+    ARegister (in=Ain, load=Aload, out=A, out[0..14]=addressM); // If load[t-1]=1 then out[t] = in[t-1]. else out does not change (out[t] = out[t-1])
+    
+    And (a=instruction[15], b=instruction[12], out=AMsel); // instruction[12] is a
+    Mux16 (a=A, b=inM, sel=AMsel, out=AM);
+    
+    ALU (x=D, y=AM, zx=instruction[11], nx=instruction[10], zy=instruction[9], ny=instruction[8], f=instruction[7], no=instruction[6], out=outM, out=outM_, zr=zr, ng=ng);
+    // instruction[11..6] is c1,c2,c3,c4,c5,c6
+    
+    And (a=instruction[15], b=instruction[4], out=Dload); // instruction[4] is d2
+    DRegister (in=outM_, load=Dload, out=D); // If load[t-1]=1 then out[t] = in[t-1]. else out does not change (out[t] = out[t-1])
+    
+    // out < 0
+    And (a=instruction[15], b=instruction[2], out=j1);
+    And (a=j1, b=ng, out=load1);
+    
+    // out = 0
+    And (a=instruction[15], b=instruction[1], out=j2);
+    And (a=j2, b=zr, out=load2);
+    
+    // out > 0
+    And (a=instruction[15], b=instruction[0], out=j3);
+    // ~p^~q <=> ~(pvq)
+    Or (a=zr, b=ng, out=zr_or_ng);
+    Not (in=zr_or_ng, out=pos);
+    And (a=j3, b=pos, out=load3);
+    
+    Or (a=load1, b=load2, out=load_);
+    Or (a=load_, b=load3, out=PCload);
+    
+    PC (in=A, load=PCload, inc=true, reset=reset, out[0..14]=pc);
+    // If reset(t-1) then out(t) = 0
+    // else if load(t-1) then out(t) = in(t-1)
+    // else if inc(t-1) then out(t) = out(t-1) + 1 (integer addition)
+    // else out(t) = out(t-1)
+    
+    And (a=instruction[15], b=instruction[3], out=writeM); // instruction[3] is d3
 }
