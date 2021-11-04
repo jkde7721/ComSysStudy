@@ -29,7 +29,7 @@ CHIP Memory {
     PARTS:
     // Put your code here:
     // 최상위 비트가 110(6)이면 Keyboard, 100~101(4~5)이면 Screen, 000~011(0~3)이면 RAM
-    // 따라서, 맨 앞 두자리가 00 or 01인 경우 RAM, 10인 경우 Screen, 11인 경우 Keyboard 지정
+    // 따라서, 맨 앞 두자리가 00 or 01인 경우 RAM, 10인 경우 Screen, 11인 경우 Keyboard 지정한다
     DMux4Way(in=load, sel=address[13..14], a=load1, b=load2, c=load3, d=load4);
     Or(a=load1, b=load2, out=load12);
     RAM16K(in=in, load=load12, address=address[0..13], out=ram);
