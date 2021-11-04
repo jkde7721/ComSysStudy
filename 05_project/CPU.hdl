@@ -1,0 +1,90 @@
+// This file is part of www.nand2tetris.org
+// and the book "The Elements of Computing Systems"
+// by Nisan and Schocken, MIT Press.
+// File name: projects/05/CPU.hdl
+
+/**
+ * The Hack CPU (Central Processing unit), consisting of an ALU,
+ * two registers named A and D, and a program counter named PC.
+ * The CPU is designed to fetch and execute instructions written in 
+ * the Hack machine language. In particular, functions as follows:
+ * Executes the inputted instruction according to the Hack machine 
+ * language specification. The D and A in the language specification
+ * refer to CPU-resident registers, while M refers to the external
+ * memory location addressed by A, i.e. to Memory[A]. The inM input 
+ * holds the value of this location. If the current instruction needs 
+ * to write a value to M, the value is placed in outM, the address 
+ * of the target location is placed in the addressM output, and the 
+ * writeM control bit is asserted. (When writeM==0, any value may 
+ * appear in outM). The outM and writeM outputs are combinational: 
+ * they are affected instantaneously by the execution of the current 
+ * instruction. The addressM and pc outputs are clocked: although they 
+ * are affected by the execution of the current instruction, they commit 
+ * to their new values only in the next time step. If reset==1 then the 
+ * CPU jumps to address 0 (i.e. pc is set to 0 in next time step) rather 
+ * than to the address resulting from executing the current instruction. 
+ */
+
+ /*
+ register: 입력 in, load 출력 out
+ */
+
+CHIP CPU {
+
+    IN  inM[16],         // M value input  (M = contents of RAM[A])
+        instruction[16], // Instruction for execution
+        reset;           // Signals whether to re-start the current
+                         // program (reset==1) or continue executing
+                         // the current program (reset==0).
+
+    OUT outM[16],        // M value output
+        writeM,          // Write to M? 
+        addressM[15],    // Address in data memory (of M)
+        pc[15];          // address of next instruction
+
+    PARTS:
+    // Put your code here:
+    /* A레지스터, D레지스터 구현?
+    최상위 비트가 0->주소 명령어, A레지스터에 저장
+    최상위 비트가 1->계산 명령어, dest값에 따라 어디에 저장할지 달라짐(제어 필요)
+    */
+    Mux16(a=instruction, b=outALU, sel=instruction[15], out=inA);
+
+    //Aregister
+    //제어 비트 -- inst[15]와 inst[5]로 진리표 작성
+    Not(in=instruction[15], out=not15);
+    And(a=instruction[15], b=instruction[5], out=instAnd);
+    Or(a=not15, b=instAnd, out=loadA);
+    ARegister(in=inA, load=loadA, out=outA, out=PCin, out[0..14]=addressM);
+
+    //Dregister
+    //제어 비트 -- inst[15]와 inst[4]로 진리표 작성
+    And(a=instruction[15], b=instruction[4], out=loadD);
+    DRegister(in=outALU, load=loadD, out=outD);
+
+    //나머지 입/출력
+    Mux16(a=outA, b=inM, sel=instruction[12], out=outAM);
+    And(a=instruction[15], b=instruction[3], out=writeM);
+
+    /**********************************************************************/
+    /*ALU 진리표??-> 그림 2.6 참고*/
+    ALU(x=outD, y=outAM, zx=instruction[11], nx=instruction[10], zy=instruction[9], ny=instruction[8], f=instruction[7], no=instruction[6], out=outM, out=outALU, zr=zr, ng=ng);
+
+    //PC
+    /*
+    load비트에 jump 조건 넣어주기
+    :j1/j2/j3이 1이고, 각각의 점프 조건을 만족하는 경우 점프 실행함
+    즉, j1(and)out음수/j2(and)out=0/j3(and)out양수
+    */
+    Or(a=ng, b=zr, out=notGT);
+    Not(in=notGT, out=GT);
+    
+    And(a=instruction[2], b=ng, out=jump0);
+    And(a=instruction[1], b=zr, out=jump1);
+    And(a=instruction[0], b=GT, out=jump2);
+    Or(a=jump0, b=jump1, out=jump01);
+    Or(a=jump01, b=jump2, out=jump012);
+    And(a=jump012, b=instruction[15], out=jump);
+
+    PC(in=PCin, reset=reset, load=jump, out[0..14]=pc);
+}
