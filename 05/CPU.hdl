@@ -41,19 +41,18 @@ CHIP CPU {
     PARTS:
     // Put your code here:
 //A-instruction
-Mux16(a[0..14]=instruction[0..14], a[15]=false, b=outALU, sel=instruction[15], out=inA);
-Mux(a=true, b=loadAFromALU, sel=instruction[15], out=loadA);
+Mux16(a[0..14]=instruction[0..14], a[15]=false, b=outALU, sel=instruction[15], out=inA);//input of register A
+Mux(a=true, b=instruction[5], sel=instruction[15], out=loadA);//load of register A
 ARegister(in=inA, load=loadA, out=outA, out[0..14]=addressM);
-DRegister(in=outALU, load=loadD, out=outD);
 //C-instruction
-Mux16(a=outA, b=inM, sel=instruction[12], out=inALU);
+DRegister(in=outALU, load=loadD, out=outD);
+Mux16(a=outA, b=inM, sel=instruction[12], out=inALU);//input of ALU
 ALU(x=outD, y=inALU, zx=instruction[11], nx=instruction[10], zy=instruction[9], ny=instruction[8], f=instruction[7], no=instruction[6], out=outALU, out=outM, zr=aluZero, ng=aluNeg);
-Mux(a=false, b=true, sel=instruction[5], out=loadAFromALU);
-And(a=instruction[15], b=instruction[4], out=loadD);
+And(a=instruction[15], b=instruction[4], out=loadD);//load of register D
 And(a=instruction[15], b=instruction[3], out=writeM);
 //PC
 Mux(a=instruction[0], b=instruction[2], sel=aluNeg, out=loadPC1);
 Mux(a=loadPC1, b=instruction[1], sel=aluZero, out=loadPC2);
-And(a=loadPC2, b=instruction[15], out=loadPC);
-PC(in=outA, load=loadPC, inc=true, reset=reset, out[0..14]=pc);
+And(a=loadPC2, b=instruction[15], out=loadPC);//load of PC
+PC(in=outA, load=loadPC, inc=true, reset=reset, out[0..14]=pc);//pc
 }
