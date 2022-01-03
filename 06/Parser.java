@@ -27,12 +27,12 @@ public class Parser {
     public static final int A_COMMAND = 0;
     public static final int C_COMMAND = 1;
     public static final int L_COMMAND = 2;
-    public BufferedReader bufferedReader = null;
     public ArrayList<String> commands = new ArrayList<>();
-    public String curCmd = ""; // 현재 명령어
-    private boolean comment = false; // 주석 여부
+    BufferedReader bufferedReader = null;
+    String curCmd = ""; // 현재 명령어
+    boolean comment = false; // 주석 여부
 
-    Parser(String filename) {
+    public Parser(String filename) {
         try {
             File file = new File(filename);
             FileInputStream fileInputStream = new FileInputStream(file);
@@ -41,7 +41,7 @@ public class Parser {
         } catch(IOException e) {}
     }
 
-    void parse() {
+    public void parse() {
         try {
             // 명령어 한 줄씩 read
             while (hasMoreCommands()) {

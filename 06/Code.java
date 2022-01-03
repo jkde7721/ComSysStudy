@@ -56,6 +56,8 @@ public class Code {
     }
     */
 
+    public Code() {}
+
     public String dest(String destCmd) {
         int d1 = 0, d2 = 0, d3 = 0;
         String result = "";
