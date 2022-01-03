@@ -6,7 +6,7 @@ import java.util.ArrayList;
 public class Parser {
     /*
     public static void main(String[] args) {
-        Parser parser = new Parser("C:/Users/PC/Desktop/Prog.asm");
+        Parser parser = new Parser("/add/Add");
         parser.parse();
 
         for(int i = 0; i < parser.commands.size(); i++) {
@@ -34,7 +34,7 @@ public class Parser {
 
     public Parser(String filename) {
         try {
-            File file = new File(filename);
+            File file = new File("C:/Users/PC/Desktop/ComSysStudy/nand2tetris/projects/06/" + filename + ".asm");
             FileInputStream fileInputStream = new FileInputStream(file);
             InputStreamReader inputStreamReader = new InputStreamReader(fileInputStream);
             bufferedReader = new BufferedReader(inputStreamReader);

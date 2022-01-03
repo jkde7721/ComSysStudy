@@ -6,8 +6,11 @@ import java.util.Set;
 
 public class Assembler {
     public static void main(String[] args) {
-        Assembler assembler = new Assembler();
-        assembler.assemble();
+        String[] filenames = {"add/Add", "max/Max", "max/MaxL", "pong/Pong", "pong/PongL", "rect/Rect", "rect/RectL"};
+        for(String filename : filenames) {
+            Assembler assembler = new Assembler(filename);
+            assembler.assemble();
+        }
 
         /*
         Set<String> keys = symbolTable.table.keySet();
@@ -23,14 +26,14 @@ public class Assembler {
     static Code code;
     static SymbolTable symbolTable;
 
-    public Assembler() {
+    public Assembler(String filename) {
         try {
-            File file = new File("C:/Users/PC/Desktop/Prog.hack");
+            File file = new File("C:/Users/PC/Desktop/ComSysStudy/nand2tetris/projects/06/" + filename + "1.hack");
             FileOutputStream fileOutputStream = new FileOutputStream(file);
             OutputStreamWriter outputStreamWriter = new OutputStreamWriter(fileOutputStream);
             bufferedWriter = new BufferedWriter(outputStreamWriter);
 
-            parser = new Parser("C:/Users/PC/Desktop/Prog.asm");
+            parser = new Parser(filename);
             code = new Code();
             symbolTable = new SymbolTable();
         } catch(IOException e) {}
