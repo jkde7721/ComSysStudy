@@ -1,9 +1,11 @@
 #include "Parser.hpp"
 #include "Code.hpp"
+#include "SymbolTable.hpp"
 #include <string>
 #include <fstream>
 #include <algorithm>
-#include <iostream>
+#include <iostream>//atoi
+#include <cctype>
 #include <bitset>
 using namespace std;
 
@@ -16,15 +18,42 @@ Parser::Parser(string fileName) {
         return;
     }
     
+    ROM = 0;
+    RAM = 16;
     Code code;
+    SymbolTable st;
     string c;
-
+    
+    //1
+    while(hasMoreCommands()){
+        type = advance();
+        if (type.compare("L_COMMAND") == 0) {
+            symbolString = symbol();
+            st.addEntry(symbolString, ROM);
+        }
+        else if (type.compare("A_COMMAND") == 0 || type.compare("C_COMMAND") == 0) {
+            ROM++;
+        }
+    }
+    
+    //2
+    inputStream.clear();
+    inputStream.seekg(0);
     while (hasMoreCommands()) {
-        this->type = advance();
+        type = advance();
         if (type.compare("A_COMMAND") == 0) {
             symbolString = symbol();
-            int num = stoi(symbolString);
+            int num = atoi(symbolString.c_str());
+            if(num==0 && symbolString.compare("0")!=0){//기호
+                if(st.contains(symbolString)) num = st.GetAddress(symbolString);
+                else{
+                    st.addEntry(symbolString, RAM);
+                    num = RAM;
+                    RAM++;
+                }
+            }
             c = bitset<16>(num).to_string();
+
             outputStream.write(c.c_str(),c.length());
             outputStream.write("\n", 1);
             cout << c << "\n";
@@ -37,16 +66,16 @@ Parser::Parser(string fileName) {
             c += code.comp(compString);
             c += code.dest(destString);
             c += code.jump(jumpString);
+
             outputStream.write(c.c_str(), c.length());
             outputStream.write("\n",1);
             cout << c << "\n";
         }
         else if (type.compare("L_COMMAND") == 0) {
-            symbolString = symbol();
         }
         else if (type.compare("SKIP")==0){
         }
-        else return;
+        else cout << "ERROR\n";
     }
 
     inputStream.close();
@@ -59,36 +88,27 @@ bool Parser::hasMoreCommands() {
 }
 
 string Parser::advance() {
-    getline(inputStream, command);
-    int i;
-    if(command[0]=='\r') return "SKIP";
-    for (i = 0; i<command.length(); i++)
-        if (command[i]!=' ') break;
-    if (i>=command.length())
-        return "SKIP";
-    else if (command[i] == '/') {
-        if (i<command.length()-1 && command[i + 1] == '/')
-            return "SKIP";
-        else
-            return "ERROR";
+    getline(inputStream, line);
+    command="";
+    for(int i=0;i<line.length();i++){
+        if(!isspace(line[i])) command+=line[i];
     }
-    else if (command[i] == '(')
-        return "L_COMMAND";
-    else if (command[i] == '@')
-        return "A_COMMAND";
-    else
-        return "C_COMMAND";
+    if(command.length()==0) return "SKIP";
+    else if(command.length()>=2 && command[0]=='/' && command[1]=='/') return "SKIP";
+    else if(command[0]=='(') return "L_COMMAND";
+    else if(command[0]=='@') return "A_COMMAND";
+    else return "C_COMMAND";
 }
 
 string Parser::symbol() {
-    switch (command[0]) {
-    case '@':
-        return command.substr(1);
-    case '(':
-        return command.substr(1, command.length() - 2);
-    default:
-            return "";
+    int i = command.find("@");
+    int j = command.find("(");
+
+    if(i>=0){
+        return command.substr(i+1, command.length());
     }
+    else
+        return command.substr(j+1, command.length()-2);
 }
 
 string Parser::dest() {
@@ -111,8 +131,9 @@ string Parser::comp() {
             if (command[idx] != ' ') res += command[idx];
     }
     else {
-        for (int idx = i + 1; idx < command.length()-1; idx++)//mac에서 \r 붙음
-            if (command[idx] != ' ') res += command[idx];
+        int k = command.find("/");
+        if(k>i) res=command.substr(i+1,k-2);
+        else res=command.substr(i+1);
     }
     return res;
 }
@@ -122,8 +143,9 @@ string Parser::jump() {
     string res;
 
     if (j >= 0) {
-        for (int idx = j + 1; idx<command.length()-1; idx++)//mac에서 \r 붙음
-            if (command[idx] != ' ') res += command[idx];
+        int k = command.find("/");
+        if(k>j) res=command.substr(j+1,k-2);
+        else res=command.substr(j+1);
     }
     return res;
 }

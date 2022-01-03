@@ -10,11 +10,12 @@ private:
     ifstream inputStream;
     ofstream outputStream;
     string type;
-    string command;
+    string line, command;
     string symbolString;
     string destString;
     string compString;
     string jumpString;
+    int ROM, RAM;
 
 public:
     Parser(string fileName);
