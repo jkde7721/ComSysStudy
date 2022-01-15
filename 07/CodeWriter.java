@@ -5,8 +5,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 
 public class CodeWriter {
-    public ArrayList<String> commands = new ArrayList<>();
-    public ArrayList<String> asmCommand = new ArrayList<>();
+    public ArrayList<String> vmCommands = new ArrayList<>();
+    public ArrayList<String> asmCommands = new ArrayList<>();
     BufferedWriter bufferedWriter = null;
     String curFilename;
     int labelNum = 0;
@@ -17,14 +17,14 @@ public class CodeWriter {
             FileOutputStream fileOutputStream = new FileOutputStream(file);
             OutputStreamWriter outputStreamWriter = new OutputStreamWriter(fileOutputStream);
             bufferedWriter = new BufferedWriter(outputStreamWriter);
-            this.commands = commands; // parsing 한 명령어 전달
+            this.vmCommands = commands; // parsing 한 명령어 전달
             setFileName(filename);
         } catch(IOException ignored) {}
     }
 
     public void codeWrite() {
         try {
-            for (String cmd : commands) {
+            for (String cmd : vmCommands) {
                 int cmdType = Parser.commandType(cmd);
                 if (cmdType == Parser.C_ARITHMETIC) writerArithmetic(cmd);
                 else if (cmdType == Parser.C_PUSH || cmdType == Parser.C_POP) {
@@ -48,7 +48,6 @@ public class CodeWriter {
     // 이항연산 : add, sub, eq, gt, lt, and, or => pop, pop, push
     void writerArithmetic(String command) throws WrongCmdTypeException {
         String arithmetic = Parser.arg1(command);
-        String op;
 
         // 단항연산
         if(arithmetic.equals("neg") || arithmetic.equals("not")) {
@@ -56,8 +55,7 @@ public class CodeWriter {
             // 연산 수행
             // ex. not
             addCommand("@R5");
-            op = (arithmetic.equals("not")) ? "M=!M" : "M=-M";
-            addCommand(op);
+            addCommand(arithmetic.equals("not") ? "M=!M" : "M=-M");
             writePushPop("push temp 0", "temp", 0);
         }
         // 이항연산
@@ -70,7 +68,7 @@ public class CodeWriter {
                 addCommand("@R6");
                 addCommand("D=M");
                 addCommand("@R5");
-                op = getOperator(arithmetic);
+                String op = getOperator(arithmetic);
                 addCommand("M=D" + op + "M"); // add : "M=D+M", sub : "M=D-M", and : "M=D&M", or : "M=D|M"
             }
             // ex. eq, gt, lt
@@ -79,21 +77,16 @@ public class CodeWriter {
                 addCommand("D=M");
                 addCommand("@R5");
                 addCommand("D=D-M");
-                addCommand("@EQ" + labelNum);
-                op = getJump(arithmetic);
-                addCommand("D;" + op); // eq : JEQ, gt : JGT, lt : JLT
-                addCommand("@NEQ" + labelNum);
-                addCommand("0;JMP");
-                addCommand("(EQ" + labelNum + ")");
+                addCommand("@TRUE" + labelNum);
+                String jump = getJump(arithmetic);
+                addCommand("D;" + jump); // eq : JEQ, gt : JGT, lt : JLT
                 addCommand("@R5");
-                addCommand("M=-1");
+                addCommand("M=0"); // false
                 addCommand("@PUSH" + labelNum);
                 addCommand("0;JMP");
-                addCommand("(NEQ" + labelNum + ")");
+                addCommand("(TRUE" + labelNum + ")");
                 addCommand("@R5");
-                addCommand("M=0");
-                addCommand("@PUSH" + labelNum);
-                addCommand("0;JMP");
+                addCommand("M=-1"); // true
                 addCommand("(PUSH" + (labelNum++) + ")");
             }
             writePushPop("push temp 0", "temp", 0);
@@ -297,7 +290,7 @@ public class CodeWriter {
     }
 
     void addCommand(String cmd) {
-        asmCommand.add(cmd);
+        asmCommands.add(cmd);
     }
 
     void writeEndCmd() {
@@ -308,8 +301,8 @@ public class CodeWriter {
 
     void writeFile() {
         try {
-            for (String s : asmCommand) {
-                bufferedWriter.write(s + "\n");
+            for (String cmd : asmCommands) {
+                bufferedWriter.write(cmd + "\n");
             }
             bufferedWriter.flush();
         } catch(IOException ignored) {}
