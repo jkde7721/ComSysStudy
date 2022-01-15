@@ -28,16 +28,16 @@ public class CodeWriter {
                 int cmdType = Parser.commandType(cmd);
                 if (cmdType == Parser.C_ARITHMETIC) writerArithmetic(cmd);
                 else if (cmdType == Parser.C_PUSH || cmdType == Parser.C_POP) {
-                    writePushPop(cmd, Parser.arg1(cmd), Integer.parseInt(Parser.arg2(cmd)));
+                    writePushPop(cmdType, Parser.arg1(cmd), Integer.parseInt(Parser.arg2(cmd)));
                 }
             }
-            writeEndCmd();
+            addEndCmd();
             writeFile();
             close();
         } catch(WrongCmdTypeException e) {System.out.println(e.getMessage());}
     }
 
-    // 코드 작성기에게 새로운 VM 파일 번역이 시작되었음을 알림 => 필요한가?
+    // 코드 작성기에게 새로운 VM 파일 번역이 시작되었음을 알림?
     void setFileName(String curFilename) {
         String[] names = curFilename.split("/");
         this.curFilename = names[names.length - 1];
@@ -51,17 +51,17 @@ public class CodeWriter {
 
         // 단항연산
         if(arithmetic.equals("neg") || arithmetic.equals("not")) {
-            writePushPop("pop temp 0", "temp", 0);
+            writePushPop(Parser.C_POP, "temp", 0);
             // 연산 수행
             // ex. not
             addCommand("@R5");
             addCommand(arithmetic.equals("not") ? "M=!M" : "M=-M");
-            writePushPop("push temp 0", "temp", 0);
+            writePushPop(Parser.C_PUSH, "temp", 0);
         }
         // 이항연산
         else {
-            writePushPop("pop temp 0", "temp", 0); // R5
-            writePushPop("pop temp 1", "temp", 1); // R6
+            writePushPop(Parser.C_POP, "temp", 0); // R5
+            writePushPop(Parser.C_POP, "temp", 1); // R6
             // 연산 수행
             // ex. add, sub, and, or
             if(arithmetic.equals("add") || arithmetic.equals("sub") || arithmetic.equals("and") || arithmetic.equals("or")) {
@@ -89,7 +89,7 @@ public class CodeWriter {
                 addCommand("M=-1"); // true
                 addCommand("(PUSH" + (labelNum++) + ")");
             }
-            writePushPop("push temp 0", "temp", 0);
+            writePushPop(Parser.C_PUSH, "temp", 0);
         }
     }
 
@@ -115,8 +115,7 @@ public class CodeWriter {
     // 메모리 접근 명령
     // command : C_PUSH or C_POP
     // segment : argument, local, static, constant, this, that, pointer, temp
-    void writePushPop(String command, String segment, int index) throws WrongCmdTypeException {
-        int cmdType = Parser.commandType(command);
+    void writePushPop(int cmdType, String segment, int index) throws WrongCmdTypeException {
         String[] seg1 = {"local", "argument", "this", "that"};
         String[] seg2 = {"pointer", "temp"};
         String seg3 = "constant";
@@ -171,10 +170,7 @@ public class CodeWriter {
                 addCommand("@" + index);
                 addCommand("A=D+A");
                 addCommand("D=M");
-                addCommand("@SP");
-                addCommand("M=M+1");
-                addCommand("A=M-1");
-                addCommand("M=D");
+                addStackPushCmd();
             } else if(segment.equals(seg3) || segment.equals(seg4)) {
                 if(segment.equals(seg3)) {
                     addCommand("@" + index);
@@ -183,10 +179,7 @@ public class CodeWriter {
                     addCommand("@" + curFilename + "." + index);
                     addCommand("D=M");
                 }
-                addCommand("@SP");
-                addCommand("M=M+1");
-                addCommand("A=M-1");
-                addCommand("M=D");
+                addStackPushCmd();
             } else {
                 throw new WrongCmdTypeException();
             }
@@ -195,40 +188,30 @@ public class CodeWriter {
         // POP
         /*
         // local, argument, this, that
-            @SP
-            M=M-1
-            A=M
-            D=M // D는 스택 최상단 값
-            @R13
-            M=D
             @LCL
             D=M
             @index(인수)
             D=D+A // D는 주소값
-            @R14
-            M=D
             @R13
-            D=M
-            @R14
+            M=D
+            @SP
+            AM=M-1
+            D=M // D는 스택 최상단 값
+            @R13
             A=M
             M=D
 
         // pointer, temp
-           @SP
-           M=M-1
-           A=M
-           D=M
-           @R13
-           M=D
            @THIS
            D=A
            @index
            D=D+A
-           @R14
-           M=D
            @R13
+           M=D
+           @SP
+           AM=M-1
            D=M
-           @R14
+           @R13
            A=M
            M=D
 
@@ -237,36 +220,25 @@ public class CodeWriter {
 
         // static
             @SP
-            M=M-1
-            A=M
+            AM=M-1
             D=M
             @curFilename.index
             M=D
         */
         else {
             if(Arrays.asList(seg1).contains(segment) || Arrays.asList(seg2).contains(segment)) {
-                addCommand("@SP");
-                addCommand("M=M-1");
-                addCommand("A=M");
-                addCommand("D=M");
-                addCommand("@R13");
-                addCommand("M=D");
                 addCommand("@" + ram);
                 addCommand(asmCmd);
                 addCommand("@" + index);
                 addCommand("D=D+A");
-                addCommand("@R14");
-                addCommand("M=D");
                 addCommand("@R13");
-                addCommand("D=M");
-                addCommand("@R14");
+                addCommand("M=D");
+                addStackPopCmd();
+                addCommand("@R13");
                 addCommand("A=M");
                 addCommand("M=D");
             } else if(segment.equals(seg4)) {
-                addCommand("@SP");
-                addCommand("M=M-1");
-                addCommand("A=M");
-                addCommand("D=M");
+                addStackPopCmd();
                 addCommand("@" + curFilename + "." + index);
                 addCommand("M=D");
             } else {
@@ -289,11 +261,26 @@ public class CodeWriter {
         }
     }
 
+    // D 레지스터에 해당 세그먼트에서 읽어온 값 저장
+    void addStackPushCmd() {
+        addCommand("@SP");
+        addCommand("M=M+1");
+        addCommand("A=M-1");
+        addCommand("M=D");
+    }
+
+    // D 레지스터에 스택 최상위 값 저장
+    void addStackPopCmd() {
+        addCommand("@SP");
+        addCommand("AM=M-1");
+        addCommand("D=M");
+    }
+
     void addCommand(String cmd) {
         asmCommands.add(cmd);
     }
 
-    void writeEndCmd() {
+    void addEndCmd() {
         addCommand("(END)");
         addCommand("@END");
         addCommand("0;JMP");
