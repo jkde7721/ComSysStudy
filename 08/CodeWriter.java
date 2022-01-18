@@ -126,7 +126,7 @@ public class CodeWriter {
                 writeCommand("@" + index);
                 writeCommand("A=D+A");
                 writeCommand("D=M");
-                addStackPushCmd();
+                writeStackPushCmd();
             } else if(segment.equals(seg3) || segment.equals(seg4)) {
                 if(segment.equals(seg3)) {
                     writeCommand("@" + index);
@@ -135,7 +135,7 @@ public class CodeWriter {
                     writeCommand("@" + curFilename + "." + index);
                     writeCommand("D=M");
                 }
-                addStackPushCmd();
+                writeStackPushCmd();
             } else {
                 throw new WrongCmdTypeException();
             }
@@ -149,12 +149,12 @@ public class CodeWriter {
                 writeCommand("D=D+A");
                 writeCommand("@R13");
                 writeCommand("M=D");
-                addStackPopCmd();
+                writeStackPopCmd();
                 writeCommand("@R13");
                 writeCommand("A=M");
                 writeCommand("M=D");
             } else if(segment.equals(seg4)) {
-                addStackPopCmd();
+                writeStackPopCmd();
                 writeCommand("@" + curFilename + "." + index);
                 writeCommand("M=D");
             } else {
@@ -189,11 +189,11 @@ public class CodeWriter {
         String[] callerFrame = {"LCL", "ARG", "THIS", "THAT"};
         writeCommand("@" + curFunctionName + "." + "RETURN" + returnNum);
         writeCommand("D=A");
-        addStackPushCmd();
+        writeStackPushCmd();
         for(String frame : callerFrame) {
             writeCommand("@" + frame);
             writeCommand("D=M");
-            addStackPushCmd();
+            writeStackPushCmd();
         }
         // ARG 위치 재설정
         writeCommand("@SP");
@@ -323,7 +323,7 @@ public class CodeWriter {
     }
 
     // D 레지스터에 해당 세그먼트에서 읽어온 값 저장
-    void addStackPushCmd() {
+    void writeStackPushCmd() {
         writeCommand("@SP");
         writeCommand("M=M+1");
         writeCommand("A=M-1");
@@ -331,13 +331,13 @@ public class CodeWriter {
     }
 
     // D 레지스터에 스택 최상위 값 저장
-    void addStackPopCmd() {
+    void writeStackPopCmd() {
         writeCommand("@SP");
         writeCommand("AM=M-1");
         writeCommand("D=M");
     }
 
-    void addEndCmd() {
+    void writeEndCmd() {
         writeCommand("(END)");
         writeCommand("@END");
         writeCommand("0;JMP");
