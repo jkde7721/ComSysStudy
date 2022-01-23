@@ -1,30 +1,26 @@
 package comsys.vm;
 
 import java.io.*;
-import java.util.ArrayList;
 import java.util.Arrays;
 
 public class CodeWriter {
     BufferedWriter bufferedWriter = null;
-    String curFilename;
-    String curFunctionName;
+    String curFilename = "";
+    String curFunctionName = "Sys";
     int labelNum = 0; // eq, gt, lt
     int returnNum = 0; // return-address
 
     public CodeWriter(String filename) {
         try {
-            File file = new File(filename + ".asm");
-            FileOutputStream fileOutputStream = new FileOutputStream(file);
-            OutputStreamWriter outputStreamWriter = new OutputStreamWriter(fileOutputStream);
-            bufferedWriter = new BufferedWriter(outputStreamWriter);
+            bufferedWriter = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(filename)));
         } catch(IOException ignored) {}
     }
 
     // parsing 한 명령어 전달
-    public void codeWrite(ArrayList<String> vmCommands, String vmFilename) {
+    public void codeWrite(Parser parser) {
         try {
-            setFileName(vmFilename); // 현재 codeWrite 중인 파일 이름 설정
-            for (String cmd : vmCommands) {
+            setFileName(parser.filename); // 현재 codeWrite 중인 파일 이름 설정
+            for (String cmd : parser.commands) {
                 int cmdType = Parser.commandType(cmd);
                 if (cmdType == Parser.C_ARITHMETIC) writerArithmetic(cmd);
                 else if (cmdType == Parser.C_PUSH || cmdType == Parser.C_POP) {
@@ -44,7 +40,7 @@ public class CodeWriter {
     // 코드 작성기에게 새로운 VM 파일 번역이 시작되었음을 알림
     void setFileName(String curFilename) {
         String[] names = curFilename.split("/");
-        this.curFilename = names[names.length - 1];
+        this.curFilename = names[names.length - 1].replace(".vm", "");
     }
 
     // VM 초기화 (부트스트랩 코드)
@@ -66,45 +62,45 @@ public class CodeWriter {
 
         // 단항연산
         if(arithmetic.equals("neg") || arithmetic.equals("not")) {
-            writePushPop(Parser.C_POP, "temp", 7);
+            writePushPop(Parser.C_POP, "temp", 10);
             // 연산 수행
             // ex. not
-            writeCommand("@R12");
+            writeCommand("@R15");
             writeCommand(arithmetic.equals("not") ? "M=!M" : "M=-M");
-            writePushPop(Parser.C_PUSH, "temp", 7);
+            writePushPop(Parser.C_PUSH, "temp", 10);
         }
         // 이항연산
         else {
-            writePushPop(Parser.C_POP, "temp", 7); // R12
-            writePushPop(Parser.C_POP, "temp", 6); // R11
+            writePushPop(Parser.C_POP, "temp", 10); // R15
+            writePushPop(Parser.C_POP, "temp", 9); // R14
             // 연산 수행
             // ex. add, sub, and, or
             if(arithmetic.equals("add") || arithmetic.equals("sub") || arithmetic.equals("and") || arithmetic.equals("or")) {
-                writeCommand("@R11");
+                writeCommand("@R14");
                 writeCommand("D=M");
-                writeCommand("@R12");
+                writeCommand("@R15");
                 String op = getOperator(arithmetic);
                 writeCommand("M=D" + op + "M"); // add : "M=D+M", sub : "M=D-M", and : "M=D&M", or : "M=D|M"
             }
             // ex. eq, gt, lt
             else {
-                writeCommand("@R11");
+                writeCommand("@R14");
                 writeCommand("D=M");
-                writeCommand("@R12");
+                writeCommand("@R15");
                 writeCommand("D=D-M");
-                writeCommand("@TRUE" + labelNum);
+                writeCommand("@" + curFunctionName + "$" + arithmetic.toUpperCase() + "_TRUE" + labelNum);
                 String jump = getJump(arithmetic);
                 writeCommand("D;" + jump); // eq : JEQ, gt : JGT, lt : JLT
-                writeCommand("@R12");
+                writeCommand("@R15");
                 writeCommand("M=0"); // false
-                writeCommand("@PUSH" + labelNum);
+                writeCommand("@" + curFunctionName + "$" + arithmetic.toUpperCase() + "_PUSH" + labelNum);
                 writeCommand("0;JMP");
-                writeCommand("(TRUE" + labelNum + ")");
-                writeCommand("@R12");
+                writeLabel(arithmetic.toUpperCase() + "_TRUE" + labelNum);
+                writeCommand("@R15");
                 writeCommand("M=-1"); // true
-                writeCommand("(PUSH" + (labelNum++) + ")");
+                writeLabel(arithmetic.toUpperCase() + "_PUSH" + (labelNum++));
             }
-            writePushPop(Parser.C_PUSH, "temp", 7);
+            writePushPop(Parser.C_PUSH, "temp", 10);
         }
     }
 
@@ -167,27 +163,27 @@ public class CodeWriter {
     // functionName$label : 함수 내 라벨만 처리 ex. '(함수이름)'은 처리X
     void writeLabel(String label) {
         // (함수이름$라벨이름)
-        writeCommand("(" + curFunctionName + "." + label + ")");
+        writeCommand("(" + curFunctionName + "$" + label + ")");
     }
 
     // 함수 내에서의 goto 만 (함수 간 제어 이동 포함X)
     void writeGoto(String label) {
-        writeCommand("@" + curFunctionName + "." + label);
+        writeCommand("@" + curFunctionName + "$" + label);
         writeCommand("0;JMP");
     }
 
     void writeIf(String label) throws WrongCmdTypeException {
-        writePushPop(Parser.C_POP, "temp", 7);
-        writeCommand("@R12");
+        writePushPop(Parser.C_POP, "temp", 10);
+        writeCommand("@R15");
         writeCommand("D=M");
-        writeCommand("@" + curFunctionName + "." + label); // 스택 최상단 값이 true(0이 아니면)이면 jump
+        writeCommand("@" + curFunctionName + "$" + label); // 스택 최상단 값이 true(0이 아니면)이면 jump
         writeCommand("D;JNE");
     }
 
     void writeCall(String functionName, int numArgs) {
         // 호출자 프레임 스택에 저장
         String[] callerFrame = {"LCL", "ARG", "THIS", "THAT"};
-        writeCommand("@" + curFunctionName + "." + "RETURN" + returnNum);
+        writeCommand("@" + curFunctionName + "$RETURN" + returnNum);
         writeCommand("D=A");
         writeStackPushCmd();
         for(String frame : callerFrame) {
@@ -212,6 +208,7 @@ public class CodeWriter {
         // 제어 이동
         writeCommand("@" + functionName);
         writeCommand("0;JMP");
+        // return-address 레이블 선언
         writeLabel("RETURN" + (returnNum++));
     }
 
@@ -230,8 +227,8 @@ public class CodeWriter {
         writeCommand("@ret");
         writeCommand("M=D");
         // 호출자를 위해 반환값 위치 재설정
-        writePushPop(Parser.C_POP, "temp", 7);
-        writeCommand("@R12");
+        writePushPop(Parser.C_POP, "temp", 10);
+        writeCommand("@R15");
         writeCommand("D=M");
         writeCommand("@ARG");
         writeCommand("A=M");
@@ -268,19 +265,19 @@ public class CodeWriter {
             writePushPop(Parser.C_PUSH, "constant", 0);
         }
 
-        /*
         // 지역변수 개수가 0일 때에는 for 문 앞뒤 라인 의미X
-            addCommand("@LCL");
-            addCommand("D=M");
+        /*
+            writeCommand("@LCL");
+            writeCommand("D=M");
             for(int i = 0; i < numLocals; i++) {
-                addCommand("@" + i);
-                addCommand("A=D+A");
-                addCommand("M=0"); // 각 지역변수 모두 0으로 초기화
+                writeCommand("@" + i);
+                writeCommand("A=D+A");
+                writeCommand("M=0"); // 각 지역변수 모두 0으로 초기화
             }
-            addCommand("@" + numLocals);
-            addCommand("D=A");
-            addCommand("@SP");
-            addCommand("M=M+D"); // 스택 포인터 지역변수 개수만큼 증가
+            writeCommand("@" + numLocals);
+            writeCommand("D=A");
+            writeCommand("@SP");
+            writeCommand("M=M+D"); // 스택 포인터 지역변수 개수만큼 증가
         */
     }
 

@@ -24,11 +24,10 @@ public class Parser {
     public Parser(String filename) {
         try {
             this.filename = filename;
-            File file = new File(filename + ".vm");
-            FileInputStream fileInputStream = new FileInputStream(file);
-            InputStreamReader inputStreamReader = new InputStreamReader(fileInputStream);
-            bufferedReader = new BufferedReader(inputStreamReader);
-        } catch(IOException e) {}
+            bufferedReader = new BufferedReader(new InputStreamReader(new FileInputStream(filename)));
+        } catch(IOException e) {
+            e.printStackTrace();
+        }
     }
 
     public void parse() {
