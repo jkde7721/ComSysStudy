@@ -4,7 +4,7 @@ parser::parser(string vmName){
 	lineCounter = -1;
 	lines.clear();
 	
-	// streamÀ¸·Î ÀĞ¾î¼­ stringÀ¸·Î º¯È¯
+	// streamÃ€Â¸Â·Ã Ã€ÃÂ¾Ã®Â¼Â­ stringÃ€Â¸Â·Ã ÂºÂ¯ÃˆÂ¯
 	string line;
 	ifstream fstream;
 	fstream.open(vmName);
