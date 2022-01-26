@@ -46,19 +46,19 @@ int main(int argc, char * argv[]) {
 			ps->advance();
 			if (ps->commandType() == C_ARITHMETIC)
 				cw->writerArithmetic(ps->arg1());
-			else if (ps->commandType == C_PUSH)
+			else if (ps->commandType() == C_PUSH)
 				cw->writePushPop(C_PUSH, ps->arg1(), ps->arg2());
-			else if (ps->commandType == C_POP)
+			else if (ps->commandType() == C_POP)
 				cw->writePushPop(C_POP, ps->arg1(), ps->arg2());
-			else if (ps->commandType == C_LABEL)
+			else if (ps->commandType() == C_LABEL)
 				cw->writeLabel(ps->arg1());
-			else if (ps->commandType == C_GOTO)
+			else if (ps->commandType() == C_GOTO)
 				cw->writeGoto(ps->arg1());
-			else if (ps->commandType == C_IF)
+			else if (ps->commandType() == C_IF)
 				cw->writeIf(ps->arg1());
-			else if (ps->commandType == C_FUNCTION)
+			else if (ps->commandType() == C_FUNCTION)
 				cw->writeFunction(ps->arg1(), ps->arg2());
-			else if (ps->commandType == C_RETURN)
+			else if (ps->commandType() == C_RETURN)
 				cw->writeReturn();
 			else // commandType == C_CALL
 				cw->writeCall(ps->arg1(), ps->arg2());
