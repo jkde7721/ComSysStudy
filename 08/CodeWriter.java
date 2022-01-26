@@ -62,45 +62,36 @@ public class CodeWriter {
 
         // 단항연산
         if(arithmetic.equals("neg") || arithmetic.equals("not")) {
-            writePushPop(Parser.C_POP, "temp", 10);
-            // 연산 수행
-            // ex. not
-            writeCommand("@R15");
-            writeCommand(arithmetic.equals("not") ? "M=!M" : "M=-M");
-            writePushPop(Parser.C_PUSH, "temp", 10);
+            writeStackPopCmd(); // 레지스터 D에 값 저장
+            writeCommand(arithmetic.equals("not") ? "D=!D" : "D=-D");
+            writeStackPushCmd();
         }
         // 이항연산
         else {
             writePushPop(Parser.C_POP, "temp", 10); // R15
-            writePushPop(Parser.C_POP, "temp", 9); // R14
+            writeStackPopCmd();
             // 연산 수행
             // ex. add, sub, and, or
             if(arithmetic.equals("add") || arithmetic.equals("sub") || arithmetic.equals("and") || arithmetic.equals("or")) {
-                writeCommand("@R14");
-                writeCommand("D=M");
                 writeCommand("@R15");
                 String op = getOperator(arithmetic);
-                writeCommand("M=D" + op + "M"); // add : "M=D+M", sub : "M=D-M", and : "M=D&M", or : "M=D|M"
+                writeCommand("D=D" + op + "M"); // add : "D=D+M", sub : "D=D-M", and : "D=D&M", or : "D=D|M"
             }
             // ex. eq, gt, lt
             else {
-                writeCommand("@R14");
-                writeCommand("D=M");
                 writeCommand("@R15");
                 writeCommand("D=D-M");
                 writeCommand("@" + curFunctionName + "$" + arithmetic.toUpperCase() + "_TRUE" + labelNum);
                 String jump = getJump(arithmetic);
                 writeCommand("D;" + jump); // eq : JEQ, gt : JGT, lt : JLT
-                writeCommand("@R15");
-                writeCommand("M=0"); // false
+                writeCommand("D=0"); // false
                 writeCommand("@" + curFunctionName + "$" + arithmetic.toUpperCase() + "_PUSH" + labelNum);
                 writeCommand("0;JMP");
                 writeLabel(arithmetic.toUpperCase() + "_TRUE" + labelNum);
-                writeCommand("@R15");
-                writeCommand("M=-1"); // true
+                writeCommand("D=-1"); // true
                 writeLabel(arithmetic.toUpperCase() + "_PUSH" + (labelNum++));
             }
-            writePushPop(Parser.C_PUSH, "temp", 10);
+            writeStackPushCmd();
         }
     }
 
@@ -173,9 +164,7 @@ public class CodeWriter {
     }
 
     void writeIf(String label) throws WrongCmdTypeException {
-        writePushPop(Parser.C_POP, "temp", 10);
-        writeCommand("@R15");
-        writeCommand("D=M");
+        writeStackPopCmd(); // 레지스터 D에 값 저장
         writeCommand("@" + curFunctionName + "$" + label); // 스택 최상단 값이 true(0이 아니면)이면 jump
         writeCommand("D;JNE");
     }
@@ -227,9 +216,7 @@ public class CodeWriter {
         writeCommand("@ret");
         writeCommand("M=D");
         // 호출자를 위해 반환값 위치 재설정
-        writePushPop(Parser.C_POP, "temp", 10);
-        writeCommand("@R15");
-        writeCommand("D=M");
+        writeStackPopCmd();
         writeCommand("@ARG");
         writeCommand("A=M");
         writeCommand("M=D");
@@ -262,23 +249,9 @@ public class CodeWriter {
         writeCommand("(" + functionName + ")");
         // 함수 호출 시, LCL, SP는 같기 때문에 그냥 인수 개수만큼 0을 스택에 push 해도 됨
         for(int i = 0; i < numLocals; i++) {
-            writePushPop(Parser.C_PUSH, "constant", 0);
+            writeCommand("D=0");
+            writeStackPushCmd();
         }
-
-        // 지역변수 개수가 0일 때에는 for 문 앞뒤 라인 의미X
-        /*
-            writeCommand("@LCL");
-            writeCommand("D=M");
-            for(int i = 0; i < numLocals; i++) {
-                writeCommand("@" + i);
-                writeCommand("A=D+A");
-                writeCommand("M=0"); // 각 지역변수 모두 0으로 초기화
-            }
-            writeCommand("@" + numLocals);
-            writeCommand("D=A");
-            writeCommand("@SP");
-            writeCommand("M=M+D"); // 스택 포인터 지역변수 개수만큼 증가
-        */
     }
 
     String getOperator(String arithmetic) {
