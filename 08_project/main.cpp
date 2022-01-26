@@ -63,8 +63,8 @@ int main(int argc, char * argv[]) {
 			else // commandType == C_CALL
 				cw->writeCall(ps->arg1(), ps->arg2());
 		} while (ps->hasMoreCommand());
-		cw->close();
 	}
+	cw->close();
 }
 
 // whole letter is lower.
