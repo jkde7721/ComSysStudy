@@ -278,6 +278,8 @@ void codewriter::writeReturn(void){
 }
 
 void codewriter::writeFunction(string functionName, int numLocals){
+	curFuncName = functionName;
+	
 	// (f)
 	writeFile << "(" << functionName << ")" << endl;
 	asmLine++;
