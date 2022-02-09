@@ -12,7 +12,7 @@ class CompilationEngine:
         
 
     def startoutputfile(self, outputfile):
-        self.outputfile = open(outputfile, 'w')
+        self.outputfile = open(outputfile, 'a')
         self.outputfile.write('<tokens>\n') 
 
     def finishoutputfile(self):
@@ -107,6 +107,7 @@ class CompilationEngine:
         if self.tokenizer.hasMoreTokens():
             #type = self.tokenizer.tokens[0][0]
             #val = self.tokenizer.tokens[0][1]
+
             while self.tokenizer.tokens[0][0] == T_KEYWORD and (self.tokenizer.tokens[0][1] in [KW_BOOLEAN, KW_CHAR, KW_INT]):
                 self.writeterminal() # type
                 self.writeterminal() # varName
@@ -272,27 +273,29 @@ class CompilationEngine:
                 self.compileterm()
             else:
                 self.writeterminal() # varName | subroutineName | className | varName | varName
-                if self.tokenizer.hasMoreTokens():type = self.tokenizer.tokens[0][0]
-                val = self.tokenizer.tokens[0][1]
-                if type == T_SYM and val == '[':
-                    self.writeterminal() # '['
-                    self.compileexpression()
-                    self.writeterminal() # ']'
-                elif type == T_SYM and val == '(':
-                    self.writeterminal() # '('
-                    self.compileexpressionlist()
-                    self.writeterminal() # ')'
-                elif type == T_SYM and val == '.':
-                    self.writeterminal() # subroutineName
-                    self.writeterminal() # '('
-                    self.compileexpressionlist()
-                    self.writeterminal() # ')'
+                if self.tokenizer.hasMoreTokens():
+                    type = self.tokenizer.tokens[0][0]
+                    val = self.tokenizer.tokens[0][1]
+                    if type == T_SYM and val == '[':
+                        self.writeterminal() # '['
+                        self.compileexpression()
+                        self.writeterminal() # ']'
+                    elif type == T_SYM and val == '(':
+                        self.writeterminal() # '('
+                        self.compileexpressionlist()
+                        self.writeterminal() # ')'
+                    elif type == T_SYM and val == '.':
+                        self.writeterminal() # '.'
+                        self.writeterminal() # subroutineName
+                        self.writeterminal() # '('
+                        self.compileexpressionlist()
+                        self.writeterminal() # ')'
 
         self.finishnonterminal('term')
 
     def compileexpressionlist(self):
         self.startnonterminal('expressionList')
-        # expression이 없는 경우는 어떻게 표현하지???
+        
         
         
         if self.tokenizer.hasMoreTokens():
