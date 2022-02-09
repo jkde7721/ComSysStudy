@@ -22,10 +22,21 @@ class CompilationEngine:
     def writeterminal(self):
         if(self.tokenizer.hasMoreTokens()):
             self.tokenizer.advance()
-            type = self.tokenizer.cur_token_type
+            #type = self.tokenizer.cur_token_type
             val = self.tokenizer.cur_token_val
-            #print(val)
-            self.outputfile.write(self.tab+'<'+tokens[self.tokenizer.tokenType(val)]+'> '+val+' <'+tokens[self.tokenizer.tokenType(val)]+'>\n')
+
+            if val == '<':
+                val = '&lt;'
+            elif val == '>':
+                val = '&gt;'
+            elif val == '\"':
+                val = '&quot;'
+            elif val == '&':
+                val = '&amp;'
+            
+                
+            #print(self.tab+'<'+tokens[self.tokenizer.tokenType(self.tokenizer.cur_token_val)]+'> '+val+' </'+tokens[self.tokenizer.tokenType(self.tokenizer.cur_token_val)]+'>\n')
+            self.outputfile.write(self.tab+'<'+tokens[self.tokenizer.tokenType(self.tokenizer.cur_token_val)]+'> '+val+' </'+tokens[self.tokenizer.tokenType(self.tokenizer.cur_token_val)]+'>\n')
 
     def startnonterminal(self, type):
         
