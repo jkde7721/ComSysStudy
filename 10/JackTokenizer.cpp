@@ -61,7 +61,7 @@ bool JackTokenizer::hasMoreTokens() {
 			else return false;
 		}
 		else if (line.length() > 1 && line[0] == '/') {
-			if (line[1] != '/' && line[1] != '*') break; // symbol인 경우
+			if (line[1] != '/' && line[1] != '*') break;//symbol인 경우
 			if (line[1] == '*') {
 				while (line.find("*/") == string::npos) {
 					getline(inputStream, line);
@@ -110,13 +110,6 @@ void JackTokenizer::advance() {//라인 앞에서 부터 토큰 읽고, 잘라내서 그 다음 토
 
 	line = line.substr(i);
 	leftTrim();
-}
-
-bool JackTokenizer::issymbol(int idx) {
-	string c = "";
-	c = line[idx];
-	if (symbolList.find(c) != symbolList.end()) return true;
-	else return false;
 }
 
 tType JackTokenizer::tokenType() {
@@ -195,7 +188,7 @@ int JackTokenizer::intVal() {
 }
 
 string JackTokenizer::stringVal() {
-	return token.substr(1, token.length() - 2);
+	return token.substr(0);
 }
 
 void JackTokenizer::leftTrim() {//line의 왼쪽 공백 제거
@@ -205,6 +198,13 @@ void JackTokenizer::leftTrim() {//line의 왼쪽 공백 제거
 			break;
 	}
 	line = line.substr(i);
+}
+
+bool JackTokenizer::issymbol(int idx) {
+	string c = "";
+	c = line[idx];
+	if (symbolList.find(c) != symbolList.end()) return true;
+	else return false;
 }
 
 bool JackTokenizer::isint() {//토큰이 정수인지 확인

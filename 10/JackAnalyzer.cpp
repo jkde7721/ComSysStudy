@@ -14,4 +14,4 @@ int main(int argc, char* argv[])
 			}
 		}
 	}
-}//file close 추가하기
+}

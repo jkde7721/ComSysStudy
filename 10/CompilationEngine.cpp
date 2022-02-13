@@ -10,6 +10,8 @@ CompilationEngine::CompilationEngine(filesystem::path fpath) {
 	outputStream.open(outpath);
 
 	CompileClass();
+
+	outputStream.close();
 }
 
 void CompilationEngine::getToken() {
@@ -19,11 +21,10 @@ void CompilationEngine::getToken() {
 
 void CompilationEngine::CompileClass() {
 	outputStream << "<class>\n";
-	cout << "<class>\n";
 
 	getToken();
 	keyword();// 'class'
-	getToken();												// 여기부터 그냥 advance한 부분들 다 getToken으로 바꾸거나 hasmoreToken 해줘야 함
+	getToken();
 	identifier();// className
 	getToken();
 	symbol();// '{'
@@ -47,9 +48,7 @@ void CompilationEngine::CompileClass() {
 	}
 	symbol();// '}'
 
-	outputStream << " </class>";
-	cout << " </class>";
-	outputStream.close();
+	outputStream << " </class>";	
 }
 
 void CompilationEngine::CompileClassVarDec() {
@@ -87,6 +86,7 @@ void CompilationEngine::CompileSubroutine() {
 	identifier();// subroutineName
 	getToken();
 	symbol();// '('
+	getToken();
 	compileParameterList();// parameterList
 	symbol();// ')'
 
@@ -102,9 +102,7 @@ void CompilationEngine::CompileSubroutine() {
 		}
 		else break;
 	}
-	// 토큰 하나 미리 먹혀있음
-	// statements
-	compileStatements();
+	compileStatements();// statements
 	symbol();// '}'
 	outputStream << "</subroutineBody>\n";
 
@@ -115,22 +113,23 @@ void CompilationEngine::compileParameterList() {
 	outputStream << "<parameterList>\n";
 
 	while (true) {
-		getToken();
-		if (tokenizer->tokenType() == SYMBOL)
+		if (tokenizer->tokenType() == SYMBOL) {
 			if (tokenizer->symbol() == ')') {
 				outputStream << "</parameterList>\n";
-				return;// 매개변수 없는 경우
+				return;
 			}
 			else if (tokenizer->symbol() == ',') {
 				symbol();// ','
 				getToken();
 			}
+		}
 		// type
 		if (tokenizer->tokenType() == KEYWORD) keyword();// 'int'|'char'|'boolean'
 		else identifier();// className;
 		// varName
 		getToken();
 		identifier();
+		getToken();
 	}
 }
 
@@ -169,7 +168,7 @@ void CompilationEngine::compileStatements() {
 			getToken();
 			break;
 		case IF:
-			compileIf();// if문의 경우 else 확인 때문에 이미 다음 토큰 advance함
+			compileIf();// if문의 경우 else 확인 때문에 이미 getToken 함
 			break;
 		case WHILE:
 			compileWhile();
@@ -194,6 +193,7 @@ void CompilationEngine::compileDo() {
 	outputStream << "<doStatement>\n";
 
 	keyword();// 'do'
+	
 	// subroutineCall
 	getToken();
 	identifier();// subroutineName|className|varName
@@ -205,6 +205,7 @@ void CompilationEngine::compileDo() {
 		getToken();
 	}
 	symbol();// '('
+	getToken();
 	CompileExpressionList();// expressionList
 	symbol();// ')'
 	getToken();
@@ -222,14 +223,14 @@ void CompilationEngine::compileLet() {
 	getToken();
 	if (tokenizer->tokenType() == SYMBOL && tokenizer->symbol() == '[') {
 		symbol();// '['
+		getToken();
 		CompileExpression();// expression
-		getToken();;// 먹혀서 끝났는지 주의!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1
 		symbol();// ']'
 		getToken();
 	}
 	symbol();// '='
+	getToken();
 	CompileExpression();// expression
-	getToken();// 먹혀서 끝났는지 주의!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1
 	symbol();// ';'
 
 	outputStream << "</letStatement>\n";
@@ -242,8 +243,8 @@ void CompilationEngine::compileWhile() {
 	// (expression)
 	getToken();
 	symbol();// '('
+	getToken();
 	CompileExpression();// expression
-	getToken();// 먹혀서 끝났는지 주의!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1
 	symbol();// ')'
 
 	// {statements}
@@ -267,13 +268,7 @@ void CompilationEngine::compileReturn() {
 		outputStream << "</returnStatement>\n";
 		return;
 	}
-	outputStream << "<expression>\n";
-	outputStream << "<term>\n";
-	identifier();
-	outputStream << "</term>\n";
-	outputStream << "</expression>\n";
-	//CompileExpression();// expression
-	getToken();// 먹혀서 끝났는지 주의!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1
+	CompileExpression();// expression
 	symbol();// ';'
 
 	outputStream << "</returnStatement>\n";
@@ -286,8 +281,8 @@ void CompilationEngine::compileIf() {
 	// (expression)
 	getToken();
 	symbol();// '('
+	getToken();
 	CompileExpression();// expression
-	getToken();// 먹혀서 끝났는지 주의!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1
 	symbol();// ')'
 
 	// {statements}
@@ -315,39 +310,101 @@ void CompilationEngine::compileIf() {
 }
 
 void CompilationEngine::CompileExpression() {
-	//return문 짜면서 보니까 expression도 토큰 하나 먹힌 상태에서 시작하도록 짜야할 듯
-	//expression 호출하는 부분들 주의!
 	outputStream << "<expression>\n";
-	outputStream << "<term>\n";
-	getToken();
-	identifier();// 표현식 없는 경우 테스트 용도
-	outputStream << "</term>\n";
+
+	CompileTerm();// term
+	while (true) {
+		if (tokenizer->tokenType() == SYMBOL) {
+			char tmp = tokenizer->symbol();
+			if (tmp == '+' || tmp == '-' || tmp == '*' || tmp == '/' || tmp == '&' || tmp == '|' || tmp == '<' || tmp == '>' || tmp == '=') {
+				symbol();// op
+				getToken();
+				CompileTerm();// term
+			}
+			else break;
+		}
+		else break;
+	}
+	
+	
 	outputStream << "</expression>\n";
 }
 
-void CompilationEngine::CompileTerm() {}
+void CompilationEngine::CompileTerm() {
+	outputStream << "<term>\n";
+
+	if (tokenizer->tokenType()==INT_CONST) {
+		outputStream << "<integerConstant> " << tokenizer->intVal() << " </integerConstant>\n";// integerConstant
+		getToken();
+	}
+	else if (tokenizer->tokenType()==STRING_CONST) {
+		outputStream << "<stringConstant> " << tokenizer->stringVal() << " </stringConstant>\n";// stringConstant
+		getToken();
+	}
+	else if (tokenizer->tokenType() == KEYWORD && (tokenizer->keyword() == TRUE || tokenizer->keyword() == FALSE || tokenizer->keyword() == KEY_NULL || tokenizer->keyword() == THIS)) {
+		keyword();// keywordConstant
+		getToken();
+	}
+	else if (tokenizer->tokenType() == IDENTIFIER) {
+		identifier();// varName|className|subroutineName
+		getToken();
+		if (tokenizer->tokenType() == SYMBOL) {
+			switch (tokenizer->symbol()) {
+			case '[':// varName [expression]
+				symbol();// '['
+				getToken();
+				CompileExpression();// expression
+				symbol();// ']'
+				getToken();
+				break;
+			case '.':// (className|varName).subroutineName(expressionList)
+				symbol();// '.'
+				getToken();
+				identifier();// subroutineName
+				getToken();
+			case '('://subroutineName(expressionList)
+				symbol();// '('
+				getToken();
+				CompileExpressionList();// expressionList
+				symbol();// ')'
+				getToken();
+				break;
+			}
+		}
+	}
+	else if (tokenizer->tokenType() == SYMBOL) {
+		symbol();// '('|unaryOP
+		switch (tokenizer->symbol()) {
+		case '(':// (expression)
+			getToken();
+			CompileExpression();
+			symbol();// ')'
+			getToken();
+			break;
+		default:// unaryOP term
+			getToken();
+			CompileTerm();// term
+		}
+	}
+
+	outputStream << "</term>\n";
+}
 
 void CompilationEngine::CompileExpressionList() {
 	outputStream << "<expressionList>\n";
+
+	if (tokenizer->tokenType() == SYMBOL && tokenizer->symbol() == ')') {
+		outputStream << "</expressionList>\n";
+		return;
+	}
 	while (true) {
+		CompileExpression();// expression
+		if (tokenizer->tokenType() == SYMBOL && tokenizer->symbol() == ')')
+			break;
+		symbol();// ','
 		getToken();
-		if (tokenizer->tokenType() == IDENTIFIER) {
-			outputStream << "<expression>\n";
-			outputStream << "<term>\n";
-			identifier();
-			outputStream << "</term>\n";
-			outputStream << "</expression>\n";
-		}
-		else if (tokenizer->tokenType() == KEYWORD) {
-			outputStream << "<expression>\n";
-			outputStream << "<term>\n";
-			keyword();
-			outputStream << "</term>\n";
-			outputStream << "</expression>\n";
-		}
-		else if (tokenizer->tokenType() == SYMBOL && tokenizer->symbol() == ',') symbol();// ','
-		else break;
-	}// 표현식 없는 경우 테스트 용도
+	}
+
 	outputStream << "</expressionList>\n";
 }
 
@@ -355,108 +412,93 @@ void CompilationEngine::keyword() {
 	switch (tokenizer->keyword()) {
 	case CLASS:
 		outputStream << "<keyword> class </keyword>\n";
-		cout << "<keyword> class </keyword>\n";
 		break;
 	case METHOD:
 		outputStream << "<keyword> method </keyword>\n";
-		cout << "<keyword> method </keyword>\n";
 		break;
 	case FUNCTION:
 		outputStream << "<keyword> function </keyword>\n";
-		cout << "<keyword> function </keyword>\n";
 		break;
 	case CONSTRUCTOR:
 		outputStream << "<keyword> constructor </keyword>\n";
-		cout << "<keyword> constructor </keyword>\n";
 		break;
 	case INT:
 		outputStream << "<keyword> int </keyword>\n";
-		cout << "<keyword> int </keyword>\n";
 		break;
 	case BOOLEAN:
 		outputStream << "<keyword> boolean </keyword>\n";
-		cout << "<keyword> boolean </keyword>\n";
 		break;
 	case CHAR:
 		outputStream << "<keyword> char </keyword>\n";
-		cout << "<keyword> char </keyword>\n";
 		break;
 	case VOID:
 		outputStream << "<keyword> void </keyword>\n";
-		cout << "<keyword> void </keyword>\n";
 		break;
 	case VAR:
 		outputStream << "<keyword> var </keyword>\n";
-		cout << "<keyword> var </keyword>\n";
 		break;
 	case STATIC:
 		outputStream << "<keyword> static </keyword>\n";
-		cout << "<keyword> static </keyword>\n";
 		break;
 	case FIELD:
 		outputStream << "<keyword> field </keyword>\n";
-		cout << "<keyword> field </keyword>\n";
 		break;
 	case LET:
 		outputStream << "<keyword> let </keyword>\n";
-		cout << "<keyword> let </keyword>\n";
 		break;
 	case DO:
 		outputStream << "<keyword> do </keyword>\n";
-		cout << "<keyword> do </keyword>\n";
 		break;
 	case IF:
 		outputStream << "<keyword> if </keyword>\n";
-		cout << "<keyword> if </keyword>\n";
 		break;
 	case ELSE:
 		outputStream << "<keyword> else </keyword>\n";
-		cout << "<keyword> else </keyword>\n";
 		break;
 	case WHILE:
 		outputStream << "<keyword> while </keyword>\n";
-		cout << "<keyword> while </keyword>\n";
 		break;
 	case RETURN:
 		outputStream << "<keyword> return </keyword>\n";
-		cout << "<keyword> return </keyword>\n";
 		break;
 	case TRUE:
 		outputStream << "<keyword> true </keyword>\n";
-		cout << "<keyword> true </keyword>\n";
 		break;
 	case FALSE:
 		outputStream << "<keyword> false </keyword>\n";
-		cout << "<keyword> false </keyword>\n";
 		break;
 	case KEY_NULL:
 		outputStream << "<keyword> null </keyword>\n";
-		cout << "<keyword> null </keyword>\n";
 		break;
 	case THIS:
 		outputStream << "<keyword> this </keyword>\n";
-		cout << "<keyword> this </keyword>\n";
 		break;
 
 	}
 }
 
 void CompilationEngine::symbol() {
-	outputStream << "<symbol> " << tokenizer->symbol() << " </symbol>\n";
-	cout << "<symbol> " << tokenizer->symbol() << " </symbol>\n";
+	char tmp = tokenizer->symbol();
+	if (tmp == '<')
+		outputStream << "<symbol> &lt; </symbol>\n";
+	else if (tmp == '>')
+		outputStream << "<symbol> &gt; </symbol>\n";
+	else if (tmp == '"')
+		outputStream << "<symbol> &quot; </symbol>\n";
+	else if (tmp == '&')
+		outputStream << "<symbol> &amp; </symbol>\n";
+	else
+		outputStream << "<symbol> " << tokenizer->symbol() << " </symbol>\n";
 }
 
 void CompilationEngine::integerConstant() {
 	outputStream << "<integerConstant> " << tokenizer->intVal() << " </integerConstant>\n";
-	cout << "<integerConstant> " << tokenizer->intVal() << " </integerConstant>\n";
 }
 
 void CompilationEngine::stringConstant() {
 	outputStream << "<stringConstant> " << tokenizer->stringVal() << " </stringConstant>\n";
-	cout << "<stringConstant> " << tokenizer->stringVal() << " </stringConstant>\n";
 }
 
 void CompilationEngine::identifier() {
 	outputStream << "<identifier> " << tokenizer->identifier() << " </identifier>\n";
-	cout << "<identifier> " << tokenizer->identifier() << " </identifier>\n";
 }

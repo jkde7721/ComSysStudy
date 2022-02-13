@@ -36,7 +36,5 @@ public:
 	void leftTrim();
 	bool issymbol(int idx);
 	bool isint();
-	bool isstring();
-
 	void test();
 };

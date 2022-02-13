@@ -6,7 +6,7 @@ private:
 	ofstream outputStream;
 
 public:
-	CompilationEngine(filesystem::path fpath);//여기서 jacktokenizer 만들어서 쓰기
+	CompilationEngine(filesystem::path fpath);
 	void CompileClass();
 	void CompileClassVarDec();
 	void CompileSubroutine();
@@ -23,13 +23,10 @@ public:
 	void CompileExpressionList();
 
 	void getToken();
-
 	void type();
-
 	void keyword();
 	void symbol();
 	void integerConstant();
 	void stringConstant();
 	void identifier();
-
 };
