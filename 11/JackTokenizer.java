@@ -4,7 +4,6 @@ import comsys.compiler.enums.Keyword;
 import comsys.compiler.enums.TokenType;
 
 import java.io.*;
-import java.lang.reflect.Array;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -12,7 +11,7 @@ import java.util.stream.Stream;
 public class JackTokenizer {
 
     private BufferedReader bufferedReader;
-    public List<String> totalTokens;
+    private List<String> totalTokens;
     private boolean isCmt = false;
     private static String curToken;
 
@@ -63,26 +62,28 @@ public class JackTokenizer {
         bufferedReader.close();
     }
 
-    public boolean hasMoreTokens() {
+    private boolean hasMoreTokens() {
         return !totalTokens.isEmpty();
     }
 
-    public void advance() {
+    private void advance() {
         curToken = totalTokens.remove(0);
     }
 
     public String lookupNext() {
-        curToken = totalTokens.get(0);
+        if(hasMoreTokens()) {
+            curToken = totalTokens.get(0);
+        }
         return curToken;
     }
 
-    void skipNext() {
+    public void skipNext() {
         if(hasMoreTokens()) {
             advance();
         }
     }
 
-    String returnNext() {
+    public String returnNext() {
         if(hasMoreTokens()) {
             advance();
         }

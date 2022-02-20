@@ -6,7 +6,7 @@ import java.util.Arrays;
 public class JackCompiler {
 
     public static void main(String[] args) {
-        String filePath = "ConvertToBin\\";
+        String filePath = "ComplexArrays\\Main.jack";
 
         JackCompiler analyzer = new JackCompiler();
         analyzer.analyze(filePath);
@@ -26,7 +26,7 @@ public class JackCompiler {
                         , file.getAbsolutePath() + "\\" + f.replace(".jack", ".vm"));
             });
         } else {
-            compile(file.getAbsolutePath(), file.getParent() + "\\" + file.getName().replace(".jack", ".vm"));
+            compile(file.getAbsolutePath(), file.getAbsolutePath().replace(".jack", ".vm"));
         }
     }
 

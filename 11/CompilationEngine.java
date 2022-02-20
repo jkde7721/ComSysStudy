@@ -5,6 +5,7 @@ import comsys.compiler.enums.*;
 public class CompilationEngine {
     JackTokenizer tokenizer;
     VMWriter writer;
+
     static String className;
     static String subroutineName;
     static int labelIdx = 0;
