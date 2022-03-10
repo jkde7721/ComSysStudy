@@ -10,8 +10,16 @@ enum Segment {
 	CONST, ARG, LOCAL, STATIC, THIS, THAT, POINTER, TEMP
 };
 
+string Segment_ele[] = {
+	"constant", "argument", "local", "static", "this", "that", "pointer", "temp"
+};
+
 enum Command {
 	ADD, SUB, NEG, EQ, GT, LT, AND, OR, NOT
+};
+
+string Command_ele[] = {
+	"add","sub", "neg", "eq", "gt", "lt", "and", "or", "not"
 };
 
 class VMWriter {
