@@ -6,42 +6,15 @@ VMWriter::VMWriter(string vmFile) {
 }
 
 void VMWriter::writePush(Segment segment, int index) {
-	writeFile << tab << "push " << segment << " " << index << endl;
+	writeFile << tab << "push " << Segment_ele[segment] << " " << index << endl;
 }
 
 void VMWriter::writePop(Segment segment, int index) {
-	writeFile << tab << "pop " << segment << " " << index << endl;
+	writeFile << tab << "pop " << Segment_ele[segment] << " " << index << endl;
 }
 
 void VMWriter::writeArithmetic(Command command) {
-	switch (command) {
-	case ADD:
-		writeFile << tab << "add" << endl;
-		break;
-	case SUB:
-		writeFile << tab << "sub" << endl;
-		break;
-	case NEG:
-		writeFile << tab << "neg" << endl;
-		break;
-	case EQ:
-		writeFile << tab << "eq" << endl;
-		break;
-	case GT:
-		writeFile << tab << "gt" << endl;
-		break;
-	case LT:
-		writeFile << tab << "lt" << endl;
-		break;
-	case AND:
-		writeFile << tab << "and" << endl;
-		break;
-	case OR:
-		writeFile << tab << "or" << endl;
-		break;
-	case NOT:
-		writeFile << tab << "not" << endl;
-	}
+	writeFile << tab << Command_ele[command] << endl;
 }
 
 void VMWriter::writeLabel(string label) {
